@@ -87,7 +87,7 @@ func (c *Cache) Show() {
 	n := c.Container.Head
 	var count int
 	for n.Next != nil {
-		fmt.Print(n.ID, n.Key, n.Value, n)
+		fmt.Print(n.ID, n.Key, n.Value)
 		fmt.Print(" -> ")
 		if count%10 == 0 {
 			fmt.Println()
