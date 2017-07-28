@@ -2,6 +2,7 @@ package lru
 
 import (
 	"fmt"
+	"sync"
 )
 
 // LRU interface
@@ -50,6 +51,7 @@ type Cache struct {
 	size      int
 	cap       int
 	memory    map[interface{}]*Node
+	mux       sync.RWMutex
 }
 
 // Get a value from cache
@@ -68,6 +70,8 @@ func (c *Cache) Get(ifce interface{}) (interface{}, error) {
 
 // Set a value to cache
 func (c *Cache) Set(key, value interface{}) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	if c.size >= c.cap {
 		removedNode := c.Container.Tail.Last
 		removedNode.Last.Next = c.Container.Tail
@@ -93,6 +97,7 @@ func (c *Cache) Set(key, value interface{}) {
 	}
 }
 
+// Show linklist
 func (c *Cache) Show() {
 	n := c.Container.Head
 	var count int
