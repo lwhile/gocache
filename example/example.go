@@ -27,7 +27,7 @@ func getData(i int) string {
 }
 
 func main() {
-	cache := gocache.NewCache(cap)
+	cache := gocache.NewCache(max * 2)
 
 	// No use cache
 	start := time.Now()
