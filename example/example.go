@@ -1,15 +1,53 @@
 package main
 
 import (
-	"github.com/lwhile/lru"
+	"fmt"
+	"math/rand"
+	"time"
+
+	"strconv"
+
+	"github.com/lwhile/gocache"
 )
 
+const (
+	max = 99999
+	cap = 10000
+)
+
+var rd *rand.Rand
+
+func init() {
+	rd = rand.New(rand.NewSource(time.Now().Unix()))
+}
+
+func getData(i int) string {
+	time.Sleep(time.Microsecond)
+	return strconv.Itoa(i)
+}
+
 func main() {
-	cache := lru.NewCache(10)
+	cache := gocache.NewCache(cap)
 
-	for i := 0; i < 100; i++ {
-		cache.Set(i, i)
+	// No use cache
+	start := time.Now()
+	for i := 0; i < max; i++ {
+		key := rd.Intn(max)
+		getData(key)
 	}
+	fmt.Println("No cache use time:", time.Since(start))
 
-	cache.Show()
+	// Use cache
+	start = time.Now()
+	for i := 0; i < max; i++ {
+		key := rd.Intn(max)
+		var v interface{}
+		var err error
+		if v, err = cache.Get(key); err != nil {
+			v = getData(key)
+			vv, _ := strconv.Atoi(v.(string))
+			cache.Set(v, vv)
+		}
+	}
+	fmt.Println("Use cache use time:", time.Since(start))
 }
