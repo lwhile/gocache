@@ -3,12 +3,15 @@ package gocache
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // LRU interface
 type LRU interface {
 	Get(interface{}) (interface{}, error)
 	Set(interface{}, interface{})
+	SetWithTTL(interface{}, interface{}, time.Duration)
+	Del(key interface{})
 }
 
 // Node type
@@ -19,7 +22,8 @@ type Node struct {
 	Last  *Node
 
 	// 过期时间戳
-	Exp uint64
+	// 0 表示无限
+	TTL int64
 }
 
 // DoubleLinkList type
@@ -68,9 +72,17 @@ func (c *Cache) Get(ifce interface{}) (interface{}, error) {
 
 // Set a value to cache
 func (c *Cache) Set(key, value interface{}) {
+	c.set(key, value, 0)
+}
+
+// SetWithTTL :
+func (c *Cache) SetWithTTL(key, value interface{}, ttl time.Duration) {
+	c.set(key, value, ttl)
+}
+
+func (c *Cache) set(key, value interface{}, ttl time.Duration) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-
 	if c.size >= c.cap {
 		removedNode := c.Container.Tail.Last
 		removedNode.Last.Next = c.Container.Tail
@@ -80,10 +92,9 @@ func (c *Cache) Set(key, value interface{}) {
 	} else {
 		movedNode := c.Container.Head.Next
 
-		newNode := new(Node)
+		newNode := newNode(key, value, ttl)
 		c.memory[key] = newNode
-		newNode.Key = key
-		newNode.Value = value
+
 		newNode.Next = movedNode
 		newNode.Last = c.Container.Head
 		movedNode.Last = newNode
@@ -91,6 +102,24 @@ func (c *Cache) Set(key, value interface{}) {
 
 		c.size++
 	}
+}
+
+// Del :
+func (c *Cache) Del(key interface{}) {
+
+}
+
+func newNode(key, value interface{}, ttl time.Duration) (node *Node) {
+	node = &Node{
+		Key:   key,
+		Value: value,
+	}
+	if ttl <= 0 {
+		node.TTL = 0
+	} else {
+		node.TTL = time.Now().Unix() + int64(ttl)
+	}
+	return
 }
 
 // Show linklist
