@@ -9,7 +9,6 @@ import (
 type LRU interface {
 	Get(interface{}) (interface{}, error)
 	Set(interface{}, interface{})
-	Show()
 }
 
 // Node type
