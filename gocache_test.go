@@ -19,7 +19,7 @@ func genRandomSeq(size int) []int {
 }
 
 func TestNewCache(t *testing.T) {
-	max := 999999 * 5
+	max := 999999
 	cache := gocache.NewCache(max)
 	seq := genRandomSeq(max)
 	for i := 0; i < max; i++ {
@@ -36,4 +36,9 @@ func TestNewCache(t *testing.T) {
 			t.Fatal(es)
 		}
 	}
+}
+
+func TestCache_Del(t *testing.T) {
+	// insert something
+	//cache := gocache.NewCache(10)
 }

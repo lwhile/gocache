@@ -81,16 +81,12 @@ func (c *Cache) SetWithTTL(key, value interface{}, ttl time.Duration) {
 }
 
 func (c *Cache) set(key, value interface{}, ttl time.Duration) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	if c.size >= c.cap {
-		removedNode := c.Container.Tail.Last
-		removedNode.Last.Next = c.Container.Tail
-		c.Container.Tail.Last = removedNode.Last
-		c.size--
-		delete(c.memory, key)
+		c.Del(c.Container.Tail.Last.Key)
 	}
 
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	movedNode := c.Container.Head.Next
 	newNode := newNode(key, value, ttl)
 	c.memory[key] = newNode
@@ -114,7 +110,6 @@ func (c *Cache) Del(key interface{}) {
 	delNode.Next.Last = delNode.Last
 	delNode.Next = nil
 	delNode.Last = nil
-
 	c.size--
 	delete(c.memory, key)
 
