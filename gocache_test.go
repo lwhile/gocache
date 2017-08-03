@@ -26,6 +26,10 @@ func TestNewCache(t *testing.T) {
 		cache.Set(i, seq[i])
 	}
 
+	if cache.Size() != max {
+		t.Fatalf("cache size %d != %d\n", cache.Size(), max)
+	}
+
 	for i := 0; i < max; i++ {
 		v, err := cache.Get(i)
 		if err != nil {
@@ -40,5 +44,27 @@ func TestNewCache(t *testing.T) {
 
 func TestCache_Del(t *testing.T) {
 	// insert something
-	//cache := gocache.NewCache(10)
+	max := 10
+	cache := gocache.NewCache(max)
+
+	for i := 0; i < max; i++ {
+		cache.Set(i, i)
+	}
+
+	for i := 0; i < max; i++ {
+		cache.Del(i)
+		v, err := cache.Get(i)
+		if err == nil {
+			t.Fatalf("delete key %v fail", v)
+		}
+
+		if cache.Size() != max-i-1 {
+			t.Fatalf("%d != %d\n", cache.Size(), max)
+		}
+	}
+
+	if cache.Size() != 0 {
+		t.Fatalf("%d !=0\n", cache.Size())
+	}
+
 }

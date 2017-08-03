@@ -12,6 +12,7 @@ type LRU interface {
 	Set(interface{}, interface{})
 	SetWithTTL(interface{}, interface{}, time.Duration)
 	Del(key interface{})
+	Size() int
 }
 
 // Node type
