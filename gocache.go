@@ -89,23 +89,34 @@ func (c *Cache) set(key, value interface{}, ttl time.Duration) {
 		c.Container.Tail.Last = removedNode.Last
 		c.size--
 		delete(c.memory, key)
-	} else {
-		movedNode := c.Container.Head.Next
-
-		newNode := newNode(key, value, ttl)
-		c.memory[key] = newNode
-
-		newNode.Next = movedNode
-		newNode.Last = c.Container.Head
-		movedNode.Last = newNode
-		c.Container.Head.Next = newNode
-
-		c.size++
 	}
+
+	movedNode := c.Container.Head.Next
+	newNode := newNode(key, value, ttl)
+	c.memory[key] = newNode
+	newNode.Next = movedNode
+	newNode.Last = c.Container.Head
+	movedNode.Last = newNode
+	c.Container.Head.Next = newNode
+	c.size++
 }
 
 // Del :
 func (c *Cache) Del(key interface{}) {
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+	delNode, ok := c.memory[key]
+	if !ok {
+		return
+	}
+
+	delNode.Last.Next = delNode.Next
+	delNode.Next.Last = delNode.Last
+	delNode.Next = nil
+	delNode.Last = nil
+
+	c.size--
+	delete(c.memory, key)
 
 }
 
