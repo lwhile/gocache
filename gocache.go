@@ -8,16 +8,16 @@ import (
 
 // LRU interface
 type LRU interface {
-	Get(interface{}) (interface{}, error)
-	Set(interface{}, interface{})
-	SetWithTTL(interface{}, interface{}, time.Duration)
-	Del(key interface{})
-	Size() int
+	Get(string) (interface{}, error)
+	Set(string, interface{})
+	SetWithTTL(string, interface{}, time.Duration)
+	Del(key string)
+	Len() int
 }
 
 // Node type
 type Node struct {
-	Key   interface{}
+	Key   string
 	Value interface{}
 	Next  *Node
 	Last  *Node
@@ -58,8 +58,8 @@ type Cache struct {
 }
 
 // Get a value from cache
-func (c *Cache) Get(ifce interface{}) (interface{}, error) {
-	node, ok := c.memory[ifce]
+func (c *Cache) Get(key string) (interface{}, error) {
+	node, ok := c.memory[key]
 
 	// 存在cache中, 将结点移到链表的头部,然后返回值
 	if ok {
@@ -68,20 +68,20 @@ func (c *Cache) Get(ifce interface{}) (interface{}, error) {
 	}
 
 	// 不在cache里
-	return nil, fmt.Errorf("Cache no contain this key: %s", ifce)
+	return nil, fmt.Errorf("Cache no contain this key: %s", key)
 }
 
 // Set a value to cache
-func (c *Cache) Set(key, value interface{}) {
+func (c *Cache) Set(key string, value interface{}) {
 	c.set(key, value, 0)
 }
 
 // SetWithTTL :
-func (c *Cache) SetWithTTL(key, value interface{}, ttl time.Duration) {
+func (c *Cache) SetWithTTL(key string, value interface{}, ttl time.Duration) {
 	c.set(key, value, ttl)
 }
 
-func (c *Cache) set(key, value interface{}, ttl time.Duration) {
+func (c *Cache) set(key string, value interface{}, ttl time.Duration) {
 	if c.size >= c.cap {
 		c.Del(c.Container.Tail.Last.Key)
 	}
@@ -99,7 +99,7 @@ func (c *Cache) set(key, value interface{}, ttl time.Duration) {
 }
 
 // Del :
-func (c *Cache) Del(key interface{}) {
+func (c *Cache) Del(key string) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	delNode, ok := c.memory[key]
@@ -116,7 +116,7 @@ func (c *Cache) Del(key interface{}) {
 
 }
 
-func newNode(key, value interface{}, ttl time.Duration) (node *Node) {
+func newNode(key string, value interface{}, ttl time.Duration) (node *Node) {
 	node = &Node{
 		Key:   key,
 		Value: value,
@@ -143,8 +143,8 @@ func (c *Cache) Show() {
 	}
 }
 
-// Size return size of cache
-func (c *Cache) Size() int {
+// Len return size of cache
+func (c *Cache) Len() int {
 	return c.size
 }
 
