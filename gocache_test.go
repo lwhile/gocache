@@ -3,6 +3,7 @@ package gocache
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -23,15 +24,15 @@ func TestNewCache(t *testing.T) {
 	cache := gocache.NewCache(max)
 	seq := genRandomSeq(max)
 	for i := 0; i < max; i++ {
-		cache.Set(i, seq[i])
+		cache.Set(strconv.Itoa(i), seq[i])
 	}
 
-	if cache.Size() != max {
-		t.Fatalf("cache size %d != %d\n", cache.Size(), max)
+	if cache.Len() != max {
+		t.Fatalf("cache size %d != %d\n", cache.Len(), max)
 	}
 
 	for i := 0; i < max; i++ {
-		v, err := cache.Get(i)
+		v, err := cache.Get(strconv.Itoa(i))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -48,23 +49,23 @@ func TestCache_Del(t *testing.T) {
 	cache := gocache.NewCache(max)
 
 	for i := 0; i < max; i++ {
-		cache.Set(i, i)
+		cache.Set(strconv.Itoa(i), i)
 	}
 
 	for i := 0; i < max; i++ {
-		cache.Del(i)
-		v, err := cache.Get(i)
+		cache.Del(strconv.Itoa(i))
+		v, err := cache.Get(strconv.Itoa(i))
 		if err == nil {
 			t.Fatalf("delete key %v fail", v)
 		}
 
-		if cache.Size() != max-i-1 {
-			t.Fatalf("%d != %d\n", cache.Size(), max)
+		if cache.Len() != max-i-1 {
+			t.Fatalf("%d != %d\n", cache.Len(), max)
 		}
 	}
 
-	if cache.Size() != 0 {
-		t.Fatalf("%d !=0\n", cache.Size())
+	if cache.Len() != 0 {
+		t.Fatalf("%d !=0\n", cache.Len())
 	}
 
 }

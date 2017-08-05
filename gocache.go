@@ -156,7 +156,7 @@ func (c *Cache) Len() int {
 func NewCache(cap int) LRU {
 	return &Cache{
 		Container: newDoubleLinkList(cap),
-		memory:    make(map[interface{}]*Node),
+		memory:    make(map[string]*Node),
 		cap:       cap,
 	}
 }
