@@ -1,7 +1,6 @@
 package gocache
 
 import (
-	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -19,53 +18,83 @@ func genRandomSeq(size int) []int {
 	return seq
 }
 
-func TestNewCache(t *testing.T) {
+func genNewTestCache(ttl int) LRU {
 	max := 999999
 	cache := gocache.NewCache(max)
 	seq := genRandomSeq(max)
 	for i := 0; i < max; i++ {
 		cache.Set(strconv.Itoa(i), seq[i])
 	}
-
-	if cache.Len() != max {
-		t.Fatalf("cache size %d != %d\n", cache.Len(), max)
-	}
-
-	for i := 0; i < max; i++ {
-		v, err := cache.Get(strconv.Itoa(i))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if v.(int) != seq[i] {
-			es := fmt.Sprintf("%v != %d\n", v.(int), seq[i])
-			t.Fatal(es)
-		}
-	}
+	return cache
 }
 
-func TestCache_Del(t *testing.T) {
-	// insert something
-	max := 10
+func genNewTestCacheWithTTL(ttl int) LRU {
+	max := 999999
 	cache := gocache.NewCache(max)
-
+	seq := genRandomSeq(max)
 	for i := 0; i < max; i++ {
-		cache.Set(strconv.Itoa(i), i)
+		cache.SetWithTTL(strconv.Itoa(i), seq[i], ttl)
 	}
+	return cache
+}
 
-	for i := 0; i < max; i++ {
-		cache.Del(strconv.Itoa(i))
-		v, err := cache.Get(strconv.Itoa(i))
-		if err == nil {
-			t.Fatalf("delete key %v fail", v)
-		}
+// func TestNewCache(t *testing.T) {
+// 	max := 999999
+// 	cache := gocache.NewCache(max)
+// 	seq := genRandomSeq(max)
+// 	for i := 0; i < max; i++ {
+// 		cache.Set(strconv.Itoa(i), seq[i])
+// 	}
 
-		if cache.Len() != max-i-1 {
-			t.Fatalf("%d != %d\n", cache.Len(), max)
-		}
-	}
+// 	if cache.Len() != max {
+// 		t.Fatalf("cache size %d != %d\n", cache.Len(), max)
+// 	}
+
+// 	for i := 0; i < max; i++ {
+// 		v, err := cache.Get(strconv.Itoa(i))
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		if v.(int) != seq[i] {
+// 			es := fmt.Sprintf("%v != %d\n", v.(int), seq[i])
+// 			t.Fatal(es)
+// 		}
+// 	}
+// }
+
+// func TestCache_Del(t *testing.T) {
+// 	// insert something
+// 	max := 10
+// 	cache := gocache.NewCache(max)
+
+// 	for i := 0; i < max; i++ {
+// 		cache.Set(strconv.Itoa(i), i)
+// 	}
+
+// 	for i := 0; i < max; i++ {
+// 		cache.Del(strconv.Itoa(i))
+// 		v, err := cache.Get(strconv.Itoa(i))
+// 		if err == nil {
+// 			t.Fatalf("delete key %v fail", v)
+// 		}
+
+// 		if cache.Len() != max-i-1 {
+// 			t.Fatalf("%d != %d\n", cache.Len(), max)
+// 		}
+// 	}
+
+// 	if cache.Len() != 0 {
+// 		t.Fatalf("%d !=0\n", cache.Len())
+// 	}
+
+// }
+
+func TestCache_clean(t *testing.T) {
+	cache := genNewTestCacheWithTTL(2)
+
+	time.Sleep(time.Second * 10)
 
 	if cache.Len() != 0 {
-		t.Fatalf("%d !=0\n", cache.Len())
+		t.Fatalf("cache clean data fail: %d != 0\n", cache.Len())
 	}
-
 }

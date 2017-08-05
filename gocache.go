@@ -4,13 +4,19 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/prometheus/common/log"
+)
+
+const (
+	dftClearnInterval = 1 * time.Second
 )
 
 // LRU interface
 type LRU interface {
 	Get(string) (interface{}, error)
 	Set(string, interface{})
-	SetWithTTL(string, interface{}, time.Duration)
+	SetWithTTL(string, interface{}, int)
 	Del(key string)
 	Len() int
 }
@@ -54,17 +60,19 @@ func newDoubleLinkList(cap int) *doubleLinkList {
 
 // Cache type
 type Cache struct {
-	Container *doubleLinkList
-	size      int
-	cap       int
-	memory    map[string]*Node
-	mux       sync.RWMutex
+	Container     *doubleLinkList
+	size          int
+	cap           int
+	memory        map[string]*Node
+	mux           sync.RWMutex
+	clearInterval time.Duration
 }
 
 // Get a value from cache
 func (c *Cache) Get(key string) (interface{}, error) {
+	c.mux.RLock()
 	node, ok := c.memory[key]
-
+	c.mux.RUnlock()
 	// 存在cache中, 将结点移到链表的头部,然后返回值
 	if ok {
 		c.Set(node.Key, node.Value)
@@ -81,8 +89,8 @@ func (c *Cache) Set(key string, value interface{}) {
 }
 
 // SetWithTTL :
-func (c *Cache) SetWithTTL(key string, value interface{}, ttl time.Duration) {
-	c.set(key, value, ttl)
+func (c *Cache) SetWithTTL(key string, value interface{}, ttl int) {
+	c.set(key, value, time.Duration(ttl))
 }
 
 func (c *Cache) set(key string, value interface{}, ttl time.Duration) {
@@ -104,8 +112,8 @@ func (c *Cache) set(key string, value interface{}, ttl time.Duration) {
 
 // Del :
 func (c *Cache) Del(key string) {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	delNode, ok := c.memory[key]
 	if !ok {
 		return
@@ -117,7 +125,22 @@ func (c *Cache) Del(key string) {
 	delNode.Last = nil
 	c.size--
 	delete(c.memory, key)
+}
 
+func (c *Cache) clean() {
+	for {
+		log.Info("clean...")
+		c.mux.RLock()
+		for k, v := range c.memory {
+			c.mux.RUnlock()
+			log.Infof("k:%s,v:%v\n", k, v)
+			if v.isExpire() {
+				log.Infof("Del %s\n", k)
+				c.Del(k)
+			}
+		}
+		time.Sleep(c.clearInterval)
+	}
 }
 
 func newNode(key string, value interface{}, ttl time.Duration) (node *Node) {
@@ -154,9 +177,12 @@ func (c *Cache) Len() int {
 
 // NewCache return a cache type
 func NewCache(cap int) LRU {
-	return &Cache{
-		Container: newDoubleLinkList(cap),
-		memory:    make(map[string]*Node),
-		cap:       cap,
+	cache := Cache{
+		Container:     newDoubleLinkList(cap),
+		memory:        make(map[string]*Node),
+		cap:           cap,
+		clearInterval: dftClearnInterval,
 	}
+	go cache.clean()
+	return &cache
 }

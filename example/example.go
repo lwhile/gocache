@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
-	"strconv"
-
 	"github.com/lwhile/gocache"
+
+	"strconv"
 )
 
 const (
@@ -26,28 +25,39 @@ func getData(i int) string {
 	return strconv.Itoa(i)
 }
 
+// func main() {
+// 	cache := gocache.NewCache(max * 2)
+
+// 	// No use cache
+// 	start := time.Now()
+// 	for i := 0; i < max; i++ {
+// 		key := rd.Intn(max)
+// 		getData(key)
+// 	}
+// 	fmt.Println("No cache use time:", time.Since(start))
+
+// 	// Use cache
+// 	start = time.Now()
+// 	for i := 0; i < max; i++ {
+// 		key := rd.Intn(max)
+// 		var v interface{}
+// 		var err error
+// 		if v, err = cache.Get(key); err != nil {
+// 			v = getData(key)
+// 			vv, _ := strconv.Atoi(v.(string))
+// 			cache.Set(v, vv)
+// 		}
+// 	}
+// 	fmt.Println("Use cache use time:", time.Since(start))
+// }
+
 func main() {
-	cache := gocache.NewCache(max * 2)
-
-	// No use cache
-	start := time.Now()
+	max := 999999
+	cache := gocache.NewCache(max)
 	for i := 0; i < max; i++ {
-		key := rd.Intn(max)
-		getData(key)
+		cache.SetWithTTL(strconv.Itoa(i), i, 1)
 	}
-	fmt.Println("No cache use time:", time.Since(start))
 
-	// Use cache
-	start = time.Now()
-	for i := 0; i < max; i++ {
-		key := rd.Intn(max)
-		var v interface{}
-		var err error
-		if v, err = cache.Get(key); err != nil {
-			v = getData(key)
-			vv, _ := strconv.Atoi(v.(string))
-			cache.Set(v, vv)
-		}
-	}
-	fmt.Println("Use cache use time:", time.Since(start))
+	time.Sleep(time.Second * 10)
+
 }
