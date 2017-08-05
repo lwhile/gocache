@@ -27,6 +27,10 @@ type Node struct {
 	TTL int64
 }
 
+func (node *Node) isExpire() bool {
+	return time.Now().Unix() > node.TTL
+}
+
 // DoubleLinkList type
 type doubleLinkList struct {
 	Head *Node
@@ -53,7 +57,7 @@ type Cache struct {
 	Container *doubleLinkList
 	size      int
 	cap       int
-	memory    map[interface{}]*Node
+	memory    map[string]*Node
 	mux       sync.RWMutex
 }
 
