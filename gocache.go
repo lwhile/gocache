@@ -2,14 +2,14 @@ package gocache
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/lwhile/utillib/safemap"
 	"github.com/prometheus/common/log"
 )
 
 const (
-	dftClearnInterval = 1 * time.Second
+	dftClearnInterval = 10 * 60 * time.Second
 )
 
 // LRU interface
@@ -34,7 +34,7 @@ type Node struct {
 }
 
 func (node *Node) isExpire() bool {
-	return time.Now().Unix() > node.TTL
+	return time.Now().Unix() > node.TTL && node.TTL > 0
 }
 
 // DoubleLinkList type
@@ -63,18 +63,21 @@ type Cache struct {
 	Container     *doubleLinkList
 	size          int
 	cap           int
-	memory        map[string]*Node
-	mux           sync.RWMutex
+	memory        safemap.SafeMap
 	clearInterval time.Duration
 }
 
 // Get a value from cache
 func (c *Cache) Get(key string) (interface{}, error) {
-	c.mux.RLock()
-	node, ok := c.memory[key]
-	c.mux.RUnlock()
+	n, ok := c.memory.Get(key)
 	// 存在cache中, 将结点移到链表的头部,然后返回值
 	if ok {
+		node := n.(*Node)
+		// Check whether expire
+		if node.isExpire() {
+			c.Del(key)
+			return nil, fmt.Errorf("key %s was expired", key)
+		}
 		c.Set(node.Key, node.Value)
 		return node.Value, nil
 	}
@@ -97,12 +100,9 @@ func (c *Cache) set(key string, value interface{}, ttl time.Duration) {
 	if c.size >= c.cap {
 		c.Del(c.Container.Tail.Last.Key)
 	}
-
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	movedNode := c.Container.Head.Next
 	newNode := newNode(key, value, ttl)
-	c.memory[key] = newNode
+	c.memory.Set(key, newNode)
 	newNode.Next = movedNode
 	newNode.Last = c.Container.Head
 	movedNode.Last = newNode
@@ -112,34 +112,34 @@ func (c *Cache) set(key string, value interface{}, ttl time.Duration) {
 
 // Del :
 func (c *Cache) Del(key string) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	delNode, ok := c.memory[key]
+	dNode, ok := c.memory.Get(key)
 	if !ok {
 		return
 	}
+
+	delNode := dNode.(*Node)
 
 	delNode.Last.Next = delNode.Next
 	delNode.Next.Last = delNode.Last
 	delNode.Next = nil
 	delNode.Last = nil
+	c.memory.Delete(key)
 	c.size--
-	delete(c.memory, key)
 }
 
 func (c *Cache) clean() {
 	for {
-		log.Info("clean...")
-		c.mux.RLock()
-		for k, v := range c.memory {
-			c.mux.RUnlock()
-			log.Infof("k:%s,v:%v\n", k, v)
-			if v.isExpire() {
-				log.Infof("Del %s\n", k)
+		time.Sleep(c.clearInterval)
+		log.Infoln("Begin clean cache...")
+		allM := c.memory.GetAll()
+		for k, v := range allM {
+			//log.Infof("k:%s,v:%v\n", k, v)
+			n := v.(*Node)
+			if n.isExpire() {
+				//log.Infof("Del %s\n", k)
 				c.Del(k)
 			}
 		}
-		time.Sleep(c.clearInterval)
 	}
 }
 
@@ -179,7 +179,7 @@ func (c *Cache) Len() int {
 func NewCache(cap int) LRU {
 	cache := Cache{
 		Container:     newDoubleLinkList(cap),
-		memory:        make(map[string]*Node),
+		memory:        safemap.NewMap(),
 		cap:           cap,
 		clearInterval: dftClearnInterval,
 	}
